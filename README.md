@@ -72,6 +72,24 @@ docker build -t cafe-os .
 docker run -p 8000:8000 cafe-os
 ```
 
+### Option D: Public URL without an account (cloudflared quick tunnel)
+
+Runs the API locally and publishes it on a temporary `https://*.trycloudflare.com`
+URL. No account, no credit card — the URL changes whenever the tunnel restarts.
+
+```bash
+pip install -e ".[dev]"
+./scripts/run_public_tunnel.sh
+```
+
+The script seeds the database on first run, starts uvicorn with a restart
+supervisor, opens the tunnel, and prints the public API / docs / KDS WebSocket
+URLs. Requires the `cloudflared` binary
+(<https://developers.cloudflare.com/cloudflare-one/connections/download-cloudflared>).
+
+> The API ships without authentication — only expose it on a trusted network, or
+> put an auth proxy in front of it first.
+
 ## Environment Variables
 
 See `.env.example` for required variables.
