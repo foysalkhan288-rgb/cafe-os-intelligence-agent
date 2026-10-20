@@ -82,14 +82,22 @@ pip install -e ".[dev]"
 API_KEY=$(openssl rand -hex 16) ./scripts/run_public_tunnel.sh
 ```
 
+On a bare container (no Python, no venv, no cloudflared) use the bootstrap
+script instead — it installs everything and then starts the deployment:
+
+```bash
+./scripts/bootstrap_deploy.sh
+```
+
 The script seeds the database on first run, starts uvicorn and the tunnel with
 restart supervisors, and prints the public API / docs / KDS WebSocket URLs.
 Requires the `cloudflared` binary
 (<https://developers.cloudflare.com/cloudflare-one/connections/download-cloudflared>).
 
-The active URL is written to `/tmp/cafe-os/public-url.txt` (updated whenever the
+The active URL is written to `.deploy/public-url.txt` (updated whenever the
 tunnel reconnects — a reconnect takes ~1 minute while Cloudflare provisions a
-new hostname). Read it with:
+new hostname). The generated API key is written to `.deploy/api-key.txt`.
+Read both with:
 
 ```bash
 ./scripts/public_url.sh

@@ -7,7 +7,7 @@
 
 set -uo pipefail
 
-LOG_DIR="${LOG_DIR:-/tmp/cafe-os}"
+LOG_DIR="${LOG_DIR:-$PWD/.deploy}"
 URL_FILE="$LOG_DIR/public-url.txt"
 
 if [ ! -s "$URL_FILE" ]; then
@@ -17,6 +17,10 @@ fi
 
 URL="$(cat "$URL_FILE")"
 echo "$URL"
+KEY_FILE="$LOG_DIR/api-key.txt"
+if [ -z "${API_KEY:-}" ] && [ -s "$KEY_FILE" ]; then
+  API_KEY="$(cat "$KEY_FILE")"
+fi
 if [ -n "${API_KEY:-}" ]; then
   echo "curl -H \"X-API-Key: $API_KEY\" \"$URL/api/v1/menu\""
 else
