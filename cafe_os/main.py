@@ -5,11 +5,14 @@ FastAPI application for Cafe OS Intelligence Agent POS endpoints.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
+import os
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel, Field
 
@@ -60,6 +63,52 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+# ---------------------------------------------------------------------------
+# API key authentication
+#
+# Disabled when API_KEY is unset (local development). When set, every
+# /api/v1 route and the KDS WebSocket require the key, supplied either as
+# the X-API-Key header or as an ?api_key= query parameter (browsers cannot
+# set headers on WebSocket handshakes).
+# ---------------------------------------------------------------------------
+
+API_KEY_HEADER = "X-API-Key"
+
+
+def _configured_api_key() -> str:
+    return (os.environ.get("API_KEY") or "").strip()
+
+
+def _key_matches(provided: Optional[str]) -> bool:
+    expected = _configured_api_key()
+    if not expected:
+        return True
+    if not provided:
+        return False
+    return hmac.compare_digest(provided, expected)
+
+
+def _extract_key(request: Request) -> Optional[str]:
+    return request.headers.get(API_KEY_HEADER) or request.query_params.get("api_key")
+
+
+@app.middleware("http")
+async def api_key_guard(request: Request, call_next):
+    """Reject unauthenticated calls to the data API when API_KEY is set."""
+    if request.url.path.startswith("/api/v1") and not _key_matches(_extract_key(request)):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": f"Missing or invalid API key — send it as the {API_KEY_HEADER} header"},
+        )
+    return await call_next(request)
+
+
+@app.get("/healthz")
+async def healthz():
+    """Liveness probe for the platform health check (no auth required)."""
+    return {"status": "ok", "service": "cafe-os"}
 
 
 # ---------------------------------------------------------------------------
@@ -546,6 +595,12 @@ async def kds_websocket(websocket: WebSocket):
     status in acknowledged|in_progress|completed; updates are rebroadcast to
     all connected displays. {"type": "ping"} gets a {"type": "pong"}.
     """
+    if not _key_matches(
+        websocket.headers.get(API_KEY_HEADER) or websocket.query_params.get("api_key")
+    ):
+        await websocket.close(code=1008)
+        return
+
     await websocket.accept()
     queue = kds_bus.subscribe()
     sender: Optional[asyncio.Task] = None

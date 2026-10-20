@@ -79,16 +79,41 @@ URL. No account, no credit card — the URL changes whenever the tunnel restarts
 
 ```bash
 pip install -e ".[dev]"
-./scripts/run_public_tunnel.sh
+API_KEY=$(openssl rand -hex 16) ./scripts/run_public_tunnel.sh
 ```
 
-The script seeds the database on first run, starts uvicorn with a restart
-supervisor, opens the tunnel, and prints the public API / docs / KDS WebSocket
-URLs. Requires the `cloudflared` binary
+The script seeds the database on first run, starts uvicorn and the tunnel with
+restart supervisors, and prints the public API / docs / KDS WebSocket URLs.
+Requires the `cloudflared` binary
 (<https://developers.cloudflare.com/cloudflare-one/connections/download-cloudflared>).
 
-> The API ships without authentication — only expose it on a trusted network, or
-> put an auth proxy in front of it first.
+The active URL is written to `/tmp/cafe-os/public-url.txt` (updated whenever the
+tunnel reconnects — a reconnect takes ~1 minute while Cloudflare provisions a
+new hostname). Read it with:
+
+```bash
+./scripts/public_url.sh
+```
+
+## Authentication
+
+Set `API_KEY` to protect the API. When it is set, every `/api/v1` route and the
+KDS WebSocket require the key, supplied as the `X-API-Key` header or an
+`?api_key=` query parameter (browsers cannot set headers on a WebSocket
+handshake). `/healthz`, `/docs` and `/openapi.json` stay public.
+
+```bash
+curl -H "X-API-Key: $API_KEY" https://<url>/api/v1/menu
+```
+
+Leaving `API_KEY` unset disables authentication — fine for local development,
+not for a public deployment.
+
+## Health Check
+
+`GET /healthz` returns `{"status": "ok", "service": "cafe-os"}` without
+authentication and is used as the healthcheck path in `railway.json` and
+`render.yaml`.
 
 ## Environment Variables
 
