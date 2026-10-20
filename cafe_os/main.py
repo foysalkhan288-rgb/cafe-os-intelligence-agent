@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel, Field
 
@@ -109,6 +109,51 @@ async def api_key_guard(request: Request, call_next):
 async def healthz():
     """Liveness probe for the platform health check (no auth required)."""
     return {"status": "ok", "service": "cafe-os"}
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    """Service index — a quick orientation page for the public URL."""
+    auth_required = bool(_configured_api_key())
+    return HTMLResponse(
+        f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cafe OS Intelligence Agent</title>
+<style>
+  body {{ font: 16px/1.6 ui-sans-serif, system-ui, sans-serif; margin: 0;
+         background: #14110f; color: #f3ece3; }}
+  main {{ max-width: 720px; margin: 0 auto; padding: 48px 24px; }}
+  h1 {{ font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }}
+  p.sub {{ color: #b6a898; margin: 0 0 28px; }}
+  ul {{ list-style: none; padding: 0; margin: 0 0 28px; }}
+  li {{ border: 1px solid #33291f; border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;
+        background: #1d1815; }}
+  a {{ color: #e8a33d; text-decoration: none; font-weight: 600; }}
+  code {{ background: #2a221b; padding: 2px 6px; border-radius: 5px; font-size: 14px; }}
+  .tag {{ display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px;
+          background: #2f6f4f; color: #d7ffe8; margin-left: 8px; }}
+</style>
+</head>
+<body>
+<main>
+  <h1>Cafe OS Intelligence Agent</h1>
+  <p class="sub">LangGraph-backed POS intelligence layer &mdash; FastAPI + SQLite</p>
+  <ul>
+    <li><a href="/docs">/docs</a> &mdash; interactive API documentation (Swagger UI)</li>
+    <li><a href="/redoc">/redoc</a> &mdash; API reference</li>
+    <li><a href="/openapi.json">/openapi.json</a> &mdash; OpenAPI schema</li>
+    <li><a href="/healthz">/healthz</a> &mdash; health probe</li>
+    <li><code>/api/v1/&hellip;</code> &mdash; orders, payments, menu, shifts, KDS, reports</li>
+    <li><code>/ws/kds</code> &mdash; kitchen display WebSocket channel</li>
+  </ul>
+  <p>{'Authentication is <strong>enabled</strong> &mdash; send <code>X-API-Key</code> (or <code>?api_key=</code>) on every <code>/api/v1</code> call.' if auth_required else 'Authentication is disabled on this deployment.'}</p>
+</main>
+</body>
+</html>"""
+    )
 
 
 # ---------------------------------------------------------------------------

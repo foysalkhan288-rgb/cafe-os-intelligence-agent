@@ -71,6 +71,13 @@ def test_health_endpoint_is_public(app_with_key):
     assert response.json()["status"] == "ok"
 
 
+def test_index_page_is_public(app_with_key):
+    with TestClient(app_with_key) as client:
+        response = client.get("/")
+    assert response.status_code == 200
+    assert "Cafe OS Intelligence Agent" in response.text
+
+
 def test_websocket_requires_key(app_with_key):
     with TestClient(app_with_key) as client:
         with pytest.raises(Exception):
