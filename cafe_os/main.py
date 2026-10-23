@@ -326,6 +326,64 @@ async def create_order_endpoint(payload: OrderIn):
     return OrderOut(**result)
 
 
+@app.post("/api/v1/demo/seed", status_code=201)
+async def seed_demo_endpoint():
+    """Generate demo orders with KDS tickets for dashboard display."""
+    import uuid, datetime, json
+    from decimal import Decimal
+    demos = [
+        ("C1", "T1", "cust-001", [("latte-001", 2, ["oat-milk"], "extra shot"), ("muffin-001", 1, [], "")]),
+        ("C2", "T3", None, [("cappuccino-001", 1, [], "no whip"), ("espresso-001", 2, ["extra shot"], "")]),
+        ("C3", None, "cust-002", [("latte-001", 1, [], ""), ("muffin-001", 2, [], "warm")]),
+        ("C1", "T2", None, [("espresso-001", 3, [], ""), ("cappuccino-001", 1, ["oat milk"], "")]),
+        ("C4", "T5", None, [("muffin-001", 1, [], ""), ("latte-001", 1, ["oat-milk", "extra shot"], "decaf")]),
+    ]
+    created = []
+    async with get_connection() as conn:
+        for counter, table, cust, items in demos:
+            order_id = f"ord-demo-{uuid.uuid4().hex[:8]}"
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            await conn.execute(
+                "INSERT INTO orders (id, counter_number, table_number, customer_id, subtotal, tax, total, payment_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (order_id, counter, table, cust, 0, 0, 0, "pending", now),
+            )
+            subtotal = 0.0
+            items_json = []
+            for menu_id, qty, mods, special in items:
+                cursor = await conn.execute("SELECT name, selling_price FROM menu_items WHERE id = ?", (menu_id,))
+                mrow = await cursor.fetchone()
+                if not mrow:
+                    continue
+                unit_price = mrow["selling_price"]
+                item_total = unit_price * qty
+                for mod_kw in mods:
+                    mcur = await conn.execute("SELECT price_delta FROM modifiers WHERE lower(keyword) = lower(?)", (mod_kw,))
+                    mrow2 = await mcur.fetchone()
+                    if mrow2:
+                        item_total += mrow2["price_delta"] * qty
+                subtotal += item_total
+                item_id = f"item-{uuid.uuid4().hex[:8]}"
+                await conn.execute(
+                    "INSERT INTO order_items (id, order_id, menu_item_id, quantity, unit_price, modifiers_json, special_instructions) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (item_id, order_id, menu_id, qty, unit_price, json.dumps(mods), special),
+                )
+                items_json.append({
+                    "menu_item_id": menu_id, "name": mrow["name"], "quantity": qty,
+                    "modifiers": mods, "special_instructions": special,
+                })
+            tax = round(subtotal * 0.10, 2)
+            total = round(subtotal + tax, 2)
+            await conn.execute("UPDATE orders SET subtotal = ?, tax = ?, total = ? WHERE id = ?", (subtotal, tax, total, order_id))
+            kds_id = f"kds-{uuid.uuid4().hex[:8]}"
+            await conn.execute(
+                "INSERT INTO kds_orders (id, order_id, items_json, status, dispatched_at) VALUES (?, ?, ?, ?, ?)",
+                (kds_id, order_id, json.dumps(items_json), "dispatched", now),
+            )
+            created.append(order_id)
+        await conn.commit()
+    return {"created": len(created), "order_ids": created}
+
+
 @app.post("/api/v1/orders/{order_id}/pay", response_model=PaymentOut)
 async def pay_order_endpoint(order_id: str, payload: PayOrderIn):
     """Record payment for a pending order.

@@ -133,10 +133,12 @@
         <div class="card-title">Recent Orders</div>
         <div id="recentOrders"><div class="empty">No orders yet</div></div>
       </div>
-      <div class="card">
-        <div class="card-title">Low Stock Alerts</div>
-        <div id="lowStockList"><div class="empty">All stocked up</div></div>
-      </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title">Demo Data</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Generate sample orders with KDS tickets to populate the dashboard.</p>
+      <button onclick="generateDemo()">🎲 Generate Demo Orders</button>
+      <pre id="demoResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+    </div>
     </div>
   </div>
 
@@ -577,8 +579,17 @@ async function lookupCustomer() {
   } catch(e) { document.getElementById('custResult').textContent = 'Error: ' + e.message; }
 }
 
-function loadAll() {
-  loadDashboard();
+async function generateDemo() {
+  try {
+    const data = await api('/api/v1/demo/seed', { method: 'POST' });
+    document.getElementById('demoResult').textContent = `Created ${data.created} demo orders`;
+    toast(`Created ${data.created} demo orders`);
+    loadDashboard();
+    loadKDS();
+  } catch(e) {
+    document.getElementById('demoResult').textContent = 'Error: ' + e.message;
+    toast(e.message, 'error');
+  }
 }
 
 // Boot
