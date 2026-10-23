@@ -709,3 +709,4 @@ async def kds_websocket(websocket: WebSocket):
         if sender is not None:
             sender.cancel()
         kds_bus.unsubscribe(queue)
+# demo endpoint
