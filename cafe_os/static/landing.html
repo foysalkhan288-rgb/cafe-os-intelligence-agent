@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cafe OS — Intelligent POS Platform</title>
+<meta name="description" content="LangGraph-backed POS intelligence layer. Orders, KDS, inventory, loyalty, reporting — all in one API.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0c;
+    --bg-alt: #141414;
+    --surface: #1a1a1a;
+    --surface2: #222222;
+    --border: #2a2a2a;
+    --border-light: #333333;
+    --text: #e8e8e8;
+    --text-secondary: #999999;
+    --text-muted: #666666;
+    --accent: #d4953a;
+    --accent-dim: #8a6028;
+    --accent-glow: rgba(212, 149, 58, 0.08);
+    --white: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+  @media (max-width: 768px) { .container { padding: 0 24px; } }
+
+  /* Nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(12, 12, 12, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { font-size: 18px; font-weight: 700; color: var(--white); letter-spacing: -0.02em; }
+  .logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 32px; align-items: center; }
+  .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 400; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--white); }
+  .nav-cta { background: var(--accent); color: #1a1208; padding: 8px 20px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; transition: opacity 0.2s; }
+  .nav-cta:hover { opacity: 0.85; }
+  .mobile-menu { display: none; }
+
+  /* Hero */
+  .hero { padding: 160px 0 120px; text-align: center; position: relative; }
+  .hero::before {
+    content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 600px; border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-block; padding: 6px 16px; border-radius: 999px;
+    border: 1px solid var(--border-light); background: var(--surface);
+    font-size: 12px; color: var(--text-secondary); letter-spacing: 0.5px;
+    text-transform: uppercase; margin-bottom: 32px;
+  }
+  .hero h1 {
+    font-size: 64px; font-weight: 700; line-height: 1.1; letter-spacing: -0.03em;
+    margin-bottom: 24px; max-width: 800px; margin-left: auto; margin-right: auto;
+  }
+  .hero h1 .highlight { color: var(--accent); }
+  .hero p {
+    font-size: 18px; color: var(--text-secondary); max-width: 560px;
+    margin: 0 auto 40px; line-height: 1.7; font-weight: 300;
+  }
+  .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--accent); color: #1a1208; padding: 14px 32px;
+    border-radius: 8px; font-weight: 600; font-size: 15px; text-decoration: none;
+    transition: opacity 0.2s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-secondary {
+    background: transparent; color: var(--text); padding: 14px 32px;
+    border-radius: 8px; font-weight: 500; font-size: 15px; text-decoration: none;
+    border: 1px solid var(--border-light); transition: border-color 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--text-secondary); }
+  .hero-note { margin-top: 24px; font-size: 12px; color: var(--text-muted); }
+
+  /* Logos/Trust */
+  .trust { padding: 60px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .trust p { text-align: center; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 24px; }
+  .trust-items { display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; opacity: 0.5; }
+  .trust-item { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+
+  /* Features */
+  .features { padding: 120px 0; }
+  .section-label { font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 16px; }
+  .section-title { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 16px; line-height: 1.2; }
+  .section-desc { font-size: 16px; color: var(--text-secondary); max-width: 560px; line-height: 1.7; font-weight: 300; margin-bottom: 64px; }
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  @media (max-width: 900px) { .features-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .features-grid { grid-template-columns: 1fr; } .hero h1 { font-size: 40px; } }
+  .feature-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 32px; transition: border-color 0.2s;
+  }
+  .feature-card:hover { border-color: var(--border-light); }
+  .feature-icon {
+    width: 44px; height: 44px; border-radius: 10px; background: var(--accent-glow);
+    border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 20px;
+  }
+  .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--white); }
+  .feature-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; font-weight: 300; }
+
+  /* How it works */
+  .how { padding: 120px 0; background: var(--bg-alt); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; margin-top: 64px; }
+  @media (max-width: 900px) { .steps { grid-template-columns: 1fr; gap: 32px; } }
+  .step { position: relative; }
+  .step-number {
+    font-size: 48px; font-weight: 700; color: var(--border-light); line-height: 1;
+    margin-bottom: 16px; letter-spacing: -0.02em;
+  }
+  .step h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--white); }
+  .step p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; font-weight: 300; }
+  .step-code {
+    margin-top: 16px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px; color: var(--accent); overflow-x: auto;
+  }
+
+  /* API Section */
+  .api-section { padding: 120px 0; }
+  .api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+  @media (max-width: 900px) { .api-grid { grid-template-columns: 1fr; gap: 40px; } }
+  .api-code-block {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px;
+    line-height: 1.7; color: var(--text-secondary); overflow-x: auto;
+  }
+  .api-code-block .key { color: var(--accent); }
+  .api-code-block .str { color: #98c379; }
+  .api-code-block .num { color: #d19a66; }
+  .api-endpoints { display: flex; flex-direction: column; gap: 12px; }
+  .endpoint {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .method { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; min-width: 48px; text-align: center; }
+  .method.get { background: #1a2a3a; color: #60a5fa; }
+  .method.post { background: #1a3a2a; color: #4ade80; }
+  .endpoint-path { font-family: monospace; font-size: 13px; color: var(--text); }
+  .endpoint-desc { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+  /* Stats */
+  .stats { padding: 80px 0; background: var(--bg-alt); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center; }
+  @media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+  .stat-value { font-size: 40px; font-weight: 700; color: var(--white); letter-spacing: -0.02em; }
+  .stat-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  /* CTA */
+  .cta { padding: 120px 0; text-align: center; }
+  .cta h2 { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 16px; }
+  .cta p { font-size: 16px; color: var(--text-secondary); margin-bottom: 32px; font-weight: 300; }
+
+  /* Footer */
+  footer { padding: 60px 0 40px; border-top: 1px solid var(--border); }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+  @media (max-width: 768px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  .footer-brand p { font-size: 13px; color: var(--text-muted); margin-top: 12px; max-width: 280px; line-height: 1.6; }
+  .footer-col h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 16px; font-weight: 600; }
+  .footer-col a { display: block; color: var(--text-secondary); text-decoration: none; font-size: 13px; margin-bottom: 8px; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--white); }
+  .footer-bottom { border-top: 1px solid var(--border); padding-top: 24px; display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; gap: 8px; }
+
+  /* Fade in animation */
+  .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="container">
+    <div class="logo">Cafe<span>OS</span></div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#api">API</a>
+      <a href="/docs">Docs</a>
+      <a href="/dashboard" class="nav-cta">Open Dashboard</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">LangGraph + FastAPI + SQLite</div>
+    <h1>The intelligence layer for<br><span class="highlight">modern cafes</span></h1>
+    <p>Order processing, kitchen display, inventory deduction, loyalty, and reporting — orchestrated by a LangGraph state machine. One API, zero complexity.</p>
+    <div class="hero-actions">
+      <a href="/dashboard" class="btn-primary">Open Dashboard →</a>
+      <a href="/docs" class="btn-secondary">View API Docs</a>
+    </div>
+    <div class="hero-note">Free to deploy · No credit card required · Open source</div>
+  </div>
+</section>
+
+<!-- Trust -->
+<section class="trust">
+  <div class="container">
+    <p>Built with</p>
+    <div class="trust-items">
+      <span class="trust-item">LangGraph</span>
+      <span class="trust-item">FastAPI</span>
+      <span class="trust-item">SQLite</span>
+      <span class="trust-item">OpenRouter LLM</span>
+      <span class="trust-item">WebSocket KDS</span>
+      <span class="trust-item">Python 3.10+</span>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything your cafe needs</h2>
+    <p class="section-desc">A complete POS intelligence backend — from order intake to kitchen dispatch to inventory deduction. Strict schema, real-time updates, zero guesswork.</p>
+    <div class="features-grid">
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🧾</div>
+        <h3>Order Orchestration</h3>
+        <p>6-node LangGraph flow: customer lookup → parse → validate modifiers → calculate totals → dispatch KDS → deduct inventory. Atomic, stateful, resumable.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">👨‍🍳</div>
+        <h3>Kitchen Display (KDS)</h3>
+        <p>Live WebSocket channel. Tickets push instantly. Staff acknowledge, start, and complete from any screen. Snapshot on connect, real-time updates.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">📦</div>
+        <h3>Inventory Deduction</h3>
+        <p>Recipe BOM-based unit deduction on every order. Modifier units tracked separately. Low-stock alerts fire automatically when thresholds are crossed.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">👤</div>
+        <h3>CRM & Loyalty</h3>
+        <p>Customer lookup by ID or phone. Reward points accrue on payment. 10% loyalty discount auto-applied at 100+ points. Preferences stored.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">💰</div>
+        <h3>Shift Reconciliation</h3>
+        <p>Open/close shifts with expected vs actual cash tracking. Cash difference flagged for review. Payment totals bank onto the open shift automatically.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">📈</div>
+        <h3>Reports & Analytics</h3>
+        <p>Daily sales, menu engineering matrix (stars/puzzles/plowhorses/dogs), waste analytics, branch comparison, and rolling-average sales forecasting.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🏷️</div>
+        <h3>Modifier Engine</h3>
+        <p>Extract modifier keywords from free-text special instructions. Map to ingredient deltas and price adjustments. Merged, deduplicated, validated.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🧠</div>
+        <h3>LLM Order Parsing</h3>
+        <p>Optional OpenRouter integration. Parse natural language orders into structured items. Activated via env var — works without it too.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🔒</div>
+        <h3>API Key Auth</h3>
+        <p>Env-gated authentication. Protect all endpoints with a single key. Disabled by default for local dev, enabled for production.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="how" id="how">
+  <div class="container">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">Three steps to a live cafe</h2>
+    <p class="section-desc">Deploy in minutes. No complex setup, no vendor lock-in. Just push and go.</p>
+    <div class="steps">
+      <div class="step fade-in">
+        <div class="step-number">01</div>
+        <h3>Deploy</h3>
+        <p>Push to GitHub. Render auto-detects render.yaml and builds. Or run the bootstrap script on any VPS. Docker included.</p>
+        <div class="step-code">git push origin main</div>
+      </div>
+      <div class="step fade-in">
+        <div class="step-number">02</div>
+        <h3>Seed & Configure</h3>
+        <p>Database seeds automatically on startup. Set OPENROUTER_API_KEY for LLM parsing. Set API_KEY for auth. That's it.</p>
+        <div class="step-code">OPENROUTER_API_KEY=sk-... uvicorn cafe_os.main:app</div>
+      </div>
+      <div class="step fade-in">
+        <div class="step-number">03</div>
+        <h3>Connect & Serve</h3>
+        <p>Point your POS terminal at the API. Open the KDS screen for live tickets. Monitor inventory, shifts, and reports from the dashboard.</p>
+        <div class="step-code">POST /api/v1/orders → KDS push → inventory deducted</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- API Section -->
+<section class="api-section" id="api">
+  <div class="container">
+    <div class="api-grid">
+      <div>
+        <div class="section-label">API</div>
+        <h2 class="section-title">Clean, documented, strict</h2>
+        <p class="section-desc">Every endpoint returns a strict Pydantic schema. Full OpenAPI spec at /openapi.json. Interactive docs at /docs.</p>
+        <div class="api-endpoints">
+          <div class="endpoint"><span class="method post">POST</span><span class="endpoint-path">/api/v1/orders</span><span class="endpoint-desc">Create order + invoke graph</span></div>
+          <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/api/v1/menu</span><span class="endpoint-desc">List active menu items</span></div>
+          <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/api/v1/kds/orders</span><span class="endpoint-desc">Kitchen tickets</span></div>
+          <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/api/v1/inventory/low-stock</span><span class="endpoint-desc">Reorder alerts</span></div>
+          <div class="endpoint"><span class="method post">POST</span><span class="endpoint-path">/api/v1/orders/{id}/pay</span><span class="endpoint-desc">Record payment + loyalty</span></div>
+          <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/api/v1/reports/forecast</span><span class="endpoint-desc">Sales forecast</span></div>
+          <div class="endpoint"><span class="method get">GET</span><span class="endpoint-path">/ws/kds</span><span class="endpoint-desc">WebSocket KDS channel</span></div>
+        </div>
+      </div>
+      <div class="api-code-block">
+<span class="key">POST</span> /api/v1/orders
+{
+  <span class="str">"counter_number"</span>: <span class="str">"C1"</span>,
+  <span class="str">"items"</span>: [
+    {
+      <span class="str">"menu_item_id"</span>: <span class="str">"latte-001"</span>,
+      <span class="str">"quantity"</span>: <span class="num">2</span>,
+      <span class="str">"modifiers"</span>: [<span class="str">"oat-milk"</span>],
+      <span class="str">"special_instructions"</span>: <span class="str">"extra shot"</span>
+    }
+  ]
+}
+
+<span class="key">→ 200 OK</span>
+{
+  <span class="str">"order_id"</span>: <span class="str">"ord-..."</span>,
+  <span class="str">"total"</span>: <span class="num">11.55</span>,
+  <span class="str">"kds_status"</span>: <span class="str">"dispatched"</span>,
+  <span class="str">"inventory_alerts"</span>: []
+}</div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section class="stats">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="fade-in"><div class="stat-value">6</div><div class="stat-label">Graph Nodes</div></div>
+      <div class="fade-in"><div class="stat-value">16</div><div class="stat-label">Tools Registered</div></div>
+      <div class="fade-in"><div class="stat-value">14</div><div class="stat-label">API Endpoints</div></div>
+      <div class="fade-in"><div class="stat-value">43</div><div class="stat-label">Tests Passing</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="container">
+    <h2>Ready to run your cafe smarter?</h2>
+    <p>Deploy in minutes. No credit card. No complex setup.</p>
+    <div class="hero-actions">
+      <a href="/dashboard" class="btn-primary">Open Dashboard →</a>
+      <a href="https://github.com/foysalkhan288-rgb/cafe-os-intelligence-agent" class="btn-secondary" target="_blank">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo">Cafe<span>OS</span></div>
+        <p>LangGraph-backed POS intelligence layer. Open source. Built for cafes that want to run smarter.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/docs">API Docs</a>
+        <a href="/healthz">Health Check</a>
+        <a href="https://github.com/foysalkhan288-rgb/cafe-os-intelligence-agent">GitHub</a>
+      </div>
+      <div class="footer-col">
+        <h4>Features</h4>
+        <a href="#features">Order Processing</a>
+        <a href="#features">KDS</a>
+        <a href="#features">Inventory</a>
+        <a href="#features">Reports</a>
+      </div>
+      <div class="footer-col">
+        <h4>Deploy</h4>
+        <a href="https://render.com">Render</a>
+        <a href="https://railway.app">Railway</a>
+        <a href="https://github.com/foysalkhan288-rgb/cafe-os-intelligence-agent">Docker</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Cafe OS Intelligence Agent. MIT License.</span>
+      <span>Built with LangGraph + FastAPI + SQLite</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Fade in on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
