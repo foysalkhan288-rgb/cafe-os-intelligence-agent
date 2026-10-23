@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel, Field
 
@@ -105,6 +105,14 @@ async def api_key_guard(request: Request, call_next):
     return await call_next(request)
 
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
+    """Serve the web dashboard."""
+    import os as _os
+    path = _os.path.join(_os.path.dirname(__file__), "static", "dashboard.html")
+    return FileResponse(path, media_type="text/html")
+
+
 @app.get("/healthz")
 async def healthz():
     """Liveness probe for the platform health check (no auth required)."""
@@ -147,7 +155,7 @@ async def index():
     <li><a href="/openapi.json">/openapi.json</a> &mdash; OpenAPI schema</li>
     <li><a href="/healthz">/healthz</a> &mdash; health probe</li>
     <li><code>/api/v1/&hellip;</code> &mdash; orders, payments, menu, shifts, KDS, reports</li>
-    <li><code>/ws/kds</code> &mdash; kitchen display WebSocket channel</li>
+    <li><a href="/dashboard">/dashboard</a> &mdash; web dashboard (orders, KDS, menu, inventory, shifts, reports)</li>
   </ul>
   <p>{'Authentication is <strong>enabled</strong> &mdash; send <code>X-API-Key</code> (or <code>?api_key=</code>) on every <code>/api/v1</code> call.' if auth_required else 'Authentication is disabled on this deployment.'}</p>
 </main>

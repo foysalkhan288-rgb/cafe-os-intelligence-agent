@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cafe OS — Dashboard</title>
+<style>
+  :root {
+    --bg: #0f0d0b;
+    --bg2: #1a1612;
+    --bg3: #241f1a;
+    --border: #3a3028;
+    --text: #f3ece3;
+    --muted: #b6a898;
+    --accent: #e8a33d;
+    --accent2: #d4763a;
+    --green: #4ade80;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.5 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+  .sidebar h1 { font-size: 16px; color: var(--accent); padding: 0 8px 16px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .nav-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); transition: all 0.15s; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: var(--accent); color: #1a1208; font-weight: 600; }
+  .nav-icon { width: 18px; text-align: center; }
+  .main { flex: 1; overflow-y: auto; padding: 24px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .page-sub { color: var(--muted); margin-bottom: 20px; font-size: 13px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--accent); }
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .stat { background: var(--bg3); border-radius: 10px; padding: 16px; text-align: center; }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+  th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+  tr:hover { background: var(--bg3); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: #1a3a2a; color: var(--green); }
+  .badge-red { background: #3a1a1a; color: var(--red); }
+  .badge-blue { background: #1a2a3a; color: var(--blue); }
+  .badge-yellow { background: #3a2a1a; color: var(--accent); }
+  .badge-purple { background: #2a1a3a; color: var(--purple); }
+  input, select, textarea { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  button { background: var(--accent); color: #1a1208; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; transition: opacity 0.15s; }
+  button:hover { opacity: 0.85; }
+  button.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+  button.danger { background: var(--red); color: #fff; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row > * { flex: 1; }
+  .kds-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .kds-ticket { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 14px; border-left: 4px solid var(--accent); }
+  .kds-ticket.acknowledged { border-left-color: var(--blue); }
+  .kds-ticket.in_progress { border-left-color: var(--purple); }
+  .kds-ticket.completed { border-left-color: var(--green); opacity: 0.6; }
+  .kds-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .kds-id { font-size: 11px; color: var(--muted); }
+  .kds-items { font-size: 13px; margin-bottom: 8px; }
+  .kds-items li { list-style: none; padding: 2px 0; }
+  .kds-actions { display: flex; gap: 6px; }
+  .kds-actions button { font-size: 11px; padding: 4px 8px; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+  .modal h2 { margin-bottom: 16px; color: var(--accent); }
+  .close-btn { position: absolute; top: 12px; right: 16px; background: none; color: var(--muted); font-size: 20px; cursor: pointer; border: none; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg3); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; z-index: 200; transform: translateY(100px); transition: transform 0.3s; }
+  .toast.show { transform: translateY(0); }
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); }
+  .auth-bar { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; gap: 12px; align-items: center; }
+  .auth-bar input { flex: 1; }
+  .empty { text-align: center; color: var(--muted); padding: 40px; }
+  .ws-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .ws-status.connected { background: var(--green); }
+  .ws-status.disconnected { background: var(--red); }
+  @media (max-width: 768px) {
+    .sidebar { width: 60px; }
+    .nav-item span:not(.nav-icon) { display: none; }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <h1>☕ Cafe OS</h1>
+  <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span><span>Dashboard</span></div>
+  <div class="nav-item" data-page="orders"><span class="nav-icon">🧾</span><span>Orders</span></div>
+  <div class="nav-item" data-page="kds"><span class="nav-icon">👨‍🍳</span><span>Kitchen (KDS)</span></div>
+  <div class="nav-item" data-page="menu"><span class="nav-icon">📋</span><span>Menu</span></div>
+  <div class="nav-item" data-page="inventory"><span class="nav-icon">📦</span><span>Inventory</span></div>
+  <div class="nav-item" data-page="shifts"><span class="nav-icon">💰</span><span>Shifts</span></div>
+  <div class="nav-item" data-page="reports"><span class="nav-icon">📈</span><span>Reports</span></div>
+  <div class="nav-item" data-page="customers"><span class="nav-icon">👤</span><span>Customers</span></div>
+  <div style="margin-top: auto; padding: 8px;">
+    <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span>Settings</span></div>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Auth Bar -->
+  <div class="auth-bar" id="authBar">
+    <span style="font-size:12px;color:var(--muted);">API Key:</span>
+    <input type="password" id="apiKeyInput" placeholder="Enter API key (or leave empty if auth disabled)" />
+    <button onclick="saveApiKey()">Save</button>
+  </div>
+
+  <!-- Dashboard Page -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-title">Dashboard</div>
+    <div class="page-sub">Cafe OS Intelligence Agent — live overview</div>
+    <div class="grid grid-4" id="statsGrid">
+      <div class="stat"><div class="stat-value" id="statMenu">—</div><div class="stat-label">Menu Items</div></div>
+      <div class="stat"><div class="stat-value" id="statLowStock">—</div><div class="stat-label">Low Stock</div></div>
+      <div class="stat"><div class="stat-value" id="statKds">—</div><div class="stat-label">KDS Tickets</div></div>
+      <div class="stat"><div class="stat-value" id="statShifts">—</div><div class="stat-label">Open Shifts</div></div>
+    </div>
+    <div class="grid grid-2" style="margin-top:16px;">
+      <div class="card">
+        <div class="card-title">Recent Orders</div>
+        <div id="recentOrders"><div class="empty">No orders yet</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Low Stock Alerts</div>
+        <div id="lowStockList"><div class="empty">All stocked up</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Orders Page -->
+  <div class="page" id="page-orders">
+    <div class="page-title">Orders</div>
+    <div class="page-sub">Create and manage orders</div>
+    <div class="card">
+      <div class="card-title">New Order</div>
+      <div class="form-group">
+        <label>Counter Number</label>
+        <input id="orderCounter" value="C1" />
+      </div>
+      <div class="form-group">
+        <label>Table Number (optional)</label>
+        <input id="orderTable" />
+      </div>
+      <div class="form-group">
+        <label>Items (JSON)</label>
+        <textarea id="orderItems" rows="4" placeholder='[{"menu_item_id":"latte-001","quantity":2,"modifiers":["oat-milk"],"special_instructions":"extra shot"}]'>[{"menu_item_id":"latte-001","quantity":1}]</textarea>
+      </div>
+      <button onclick="createOrder()">Create Order</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Order Result</div>
+      <pre id="orderResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);">No order created yet</pre>
+    </div>
+  </div>
+
+  <!-- KDS Page -->
+  <div class="page" id="page-kds">
+    <div class="page-title">Kitchen Display (KDS) <span class="ws-status" id="wsStatus"></span></div>
+    <div class="page-sub">Live kitchen tickets — updates in real time</div>
+    <div class="kds-board" id="kdsBoard"><div class="empty">No active tickets</div></div>
+  </div>
+
+  <!-- Menu Page -->
+  <div class="page" id="page-menu">
+    <div class="page-title">Menu</div>
+    <div class="page-sub">Active menu items</div>
+    <div class="card">
+      <table><thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Packaging</th><th>Active</th></tr></thead>
+      <tbody id="menuTable"></tbody></table>
+    </div>
+  </div>
+
+  <!-- Inventory Page -->
+  <div class="page" id="page-inventory">
+    <div class="page-title">Inventory</div>
+    <div class="page-sub">Low stock alerts</div>
+    <div class="card">
+      <table><thead><tr><th>ID</th><th>Name</th><th>Unit</th><th>Stock</th><th>Reorder Threshold</th></tr></thead>
+      <tbody id="inventoryTable"></tbody></table>
+    </div>
+  </div>
+
+  <!-- Shifts Page -->
+  <div class="page" id="page-shifts">
+    <div class="page-title">Shifts</div>
+    <div class="page-sub">Cashier shifts and reconciliation</div>
+    <div class="card">
+      <div class="card-title">Open New Shift</div>
+      <div class="form-row">
+        <div class="form-group"><label>Cashier ID</label><input id="shiftCashier" value="cashier-001" /></div>
+        <div class="form-group"><label>Opening Cash</label><input id="shiftOpening" type="number" value="200" /></div>
+      </div>
+      <button onclick="openShift()">Open Shift</button>
+    </div>
+    <div class="card">
+      <div class="card-title">All Shifts</div>
+      <table><thead><tr><th>ID</th><th>Cashier</th><th>Status</th><th>Expected Cash</th><th>Started</th></tr></thead>
+      <tbody id="shiftsTable"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="card-title">Reconcile Shift</div>
+      <div class="form-row">
+        <div class="form-group"><label>Shift ID</label><input id="reconShiftId" /></div>
+        <div class="form-group"><label>Actual Cash</label><input id="reconActual" type="number" /></div>
+      </div>
+      <button onclick="reconcileShift()">Reconcile & Close</button>
+      <pre id="reconResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+    </div>
+  </div>
+
+  <!-- Reports Page -->
+  <div class="page" id="page-reports">
+    <div class="page-title">Reports</div>
+    <div class="page-sub">Sales, waste, forecast, menu engineering</div>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Daily Sales</div>
+        <div class="form-group"><label>Date (YYYY-MM-DD)</label><input id="reportDate" value="2026-08-04" /></div>
+        <button onclick="loadDailySales()">Load</button>
+        <pre id="dailySalesResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Sales Forecast</div>
+        <div class="form-group"><label>Days</label><input id="forecastDays" type="number" value="7" /></div>
+        <button onclick="loadForecast()">Load</button>
+        <pre id="forecastResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Menu Engineering</div>
+        <button onclick="loadMenuEngineering()">Load Matrix</button>
+        <pre id="menuEngResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Waste Analytics</div>
+        <button onclick="loadWaste()">Load</button>
+        <pre id="wasteResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Branch Comparison</div>
+        <button onclick="loadBranchCompare()">Load</button>
+        <pre id="branchCompareResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Record Waste</div>
+        <div class="form-group"><label>Ingredient ID</label><input id="wasteIngId" value="milk-001" /></div>
+        <div class="form-group"><label>Quantity</label><input id="wasteQty" type="number" value="0.5" /></div>
+        <div class="form-group"><label>Unit</label><input id="wasteUnit" value="L" /></div>
+        <div class="form-group"><label>Reason</label><input id="wasteReason" value="spoilage" /></div>
+        <button onclick="recordWaste()">Record</button>
+        <pre id="wasteRecordResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customers Page -->
+  <div class="page" id="page-customers">
+    <div class="page-title">Customers</div>
+    <div class="page-sub">CRM lookup</div>
+    <div class="card">
+      <div class="form-group"><label>Customer ID</label><input id="custId" value="cust-001" /></div>
+      <button onclick="lookupCustomer()">Lookup</button>
+      <pre id="custResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+    </div>
+  </div>
+
+  <!-- Settings Page -->
+  <div class="page" id="page-settings">
+    <div class="page-title">Settings</div>
+    <div class="page-sub">Configuration</div>
+    <div class="card">
+      <div class="card-title">API Connection</div>
+      <div class="form-group"><label>Base URL</label><input id="baseUrl" /></div>
+      <div class="form-group"><label>API Key</label><input id="settingsApiKey" type="password" /></div>
+      <button onclick="saveSettings()">Save</button>
+    </div>
+    <div class="card">
+      <div class="card-title">About</div>
+      <p style="color:var(--muted);font-size:13px;">Cafe OS Intelligence Agent v0.1.0 — LangGraph + FastAPI + SQLite</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_BASE = window.location.origin;
+let API_BASE = localStorage.getItem('cafeos_base') || DEFAULT_BASE;
+let API_KEY = localStorage.getItem('cafeos_key') || '';
+let ws = null;
+
+// Init
+document.getElementById('baseUrl').value = API_BASE;
+document.getElementById('settingsApiKey').value = API_KEY;
+document.getElementById('apiKeyInput').value = API_KEY;
+
+function headers() {
+  const h = {'Content-Type': 'application/json'};
+  if (API_KEY) h['X-API-Key'] = API_KEY;
+  return h;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(API_BASE + path, { headers: headers(), ...opts });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`${res.status}: ${err}`);
+  }
+  return res.json();
+}
+
+function toast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+function saveApiKey() {
+  API_KEY = document.getElementById('apiKeyInput').value;
+  localStorage.setItem('cafeos_key', API_KEY);
+  toast('API key saved');
+  loadAll();
+}
+
+function saveSettings() {
+  API_BASE = document.getElementById('baseUrl').value;
+  API_KEY = document.getElementById('settingsApiKey').value;
+  localStorage.setItem('cafeos_base', API_BASE);
+  localStorage.setItem('cafeos_key', API_KEY);
+  document.getElementById('apiKeyInput').value = API_KEY;
+  toast('Settings saved');
+  loadAll();
+}
+
+// Navigation
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('page-' + el.dataset.page).classList.add('active');
+    if (el.dataset.page === 'kds') connectWS();
+    if (el.dataset.page === 'menu') loadMenu();
+    if (el.dataset.page === 'inventory') loadInventory();
+    if (el.dataset.page === 'shifts') loadShifts();
+    if (el.dataset.page === 'dashboard') loadDashboard();
+  });
+});
+
+// Dashboard
+async function loadDashboard() {
+  try {
+    const menu = await api('/api/v1/menu');
+    document.getElementById('statMenu').textContent = menu.length;
+  } catch(e) { document.getElementById('statMenu').textContent = '?'; }
+  try {
+    const ls = await api('/api/v1/inventory/low-stock');
+    document.getElementById('statLowStock').textContent = ls.length;
+    const el = document.getElementById('lowStockList');
+    if (ls.length === 0) el.innerHTML = '<div class="empty">All stocked up</div>';
+    else el.innerHTML = ls.map(i => `<div style="padding:6px 0;border-bottom:1px solid var(--border);"><b>${i.name}</b> — ${i.current_stock} ${i.unit} (threshold: ${i.reorder_threshold})</div>`).join('');
+  } catch(e) { document.getElementById('statLowStock').textContent = '?'; }
+  try {
+    const kds = await api('/api/v1/kds/orders');
+    document.getElementById('statKds').textContent = kds.length;
+  } catch(e) { document.getElementById('statKds').textContent = '?'; }
+  try {
+    const shifts = await api('/api/v1/shifts?status=open');
+    document.getElementById('statShifts').textContent = shifts.length;
+  } catch(e) { document.getElementById('statShifts').textContent = '?'; }
+}
+
+// Orders
+async function createOrder() {
+  try {
+    const items = JSON.parse(document.getElementById('orderItems').value);
+    const data = await api('/api/v1/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        counter_number: document.getElementById('orderCounter').value,
+        table_number: document.getElementById('orderTable').value || null,
+        items: items
+      })
+    });
+    document.getElementById('orderResult').textContent = JSON.stringify(data, null, 2);
+    toast('Order created: ' + data.order_id);
+    if (data.kds_status === 'dispatched') loadKDS();
+  } catch(e) {
+    document.getElementById('orderResult').textContent = 'Error: ' + e.message;
+    toast(e.message, 'error');
+  }
+}
+
+// KDS WebSocket
+function connectWS() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+  const wsUrl = API_BASE.replace('http', 'ws') + '/ws/kds' + (API_KEY ? '?api_key=' + encodeURIComponent(API_KEY) : '');
+  ws = new WebSocket(wsUrl);
+  const status = document.getElementById('wsStatus');
+  ws.onopen = () => { status.className = 'ws-status connected'; };
+  ws.onclose = () => { status.className = 'ws-status disconnected'; setTimeout(connectWS, 3000); };
+  ws.onerror = () => { status.className = 'ws-status disconnected'; };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'snapshot' || msg.type === 'order_dispatched') {
+      loadKDS();
+    } else if (msg.type === 'status_changed') {
+      loadKDS();
+    }
+  };
+}
+
+async function loadKDS() {
+  try {
+    const orders = await api('/api/v1/kds/orders');
+    const board = document.getElementById('kdsBoard');
+    if (!orders || orders.length === 0) { board.innerHTML = '<div class="empty">No active tickets</div>'; return; }
+    board.innerHTML = orders.map(o => `
+      <div class="kds-ticket ${o.status}">
+        <div class="kds-header">
+          <strong>${o.order_id?.slice(-8) || o.kds_id?.slice(-8)}</strong>
+          <span class="badge badge-${o.status === 'completed' ? 'green' : o.status === 'in_progress' ? 'purple' : o.status === 'acknowledged' ? 'blue' : 'yellow'}">${o.status}</span>
+        </div>
+        <div class="kds-id">${o.kds_id} · ${o.dispatched_at || ''}</div>
+        <ul class="kds-items">${(o.items || []).map(i => `<li>• ${i.quantity}× ${i.name || i.menu_item_id} ${i.modifiers?.length ? '(' + i.modifiers.join(', ') + ')' : ''}</li>`).join('')}</ul>
+        <div class="kds-actions">
+          ${o.status !== 'acknowledged' ? `<button class="secondary" onclick="updateKDS('${o.kds_id}','acknowledged')">Ack</button>` : ''}
+          ${o.status !== 'in_progress' ? `<button class="secondary" onclick="updateKDS('${o.kds_id}','in_progress')">Start</button>` : ''}
+          ${o.status !== 'completed' ? `<button onclick="updateKDS('${o.kds_id}','completed')">Done</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { document.getElementById('kdsBoard').innerHTML = '<div class="empty">Error: ' + e.message + '</div>'; }
+}
+
+async function updateKDS(kdsId, status) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({type: 'status_update', kds_id: kdsId, status: status}));
+  } else {
+    await api('/api/v1/kds/orders/' + kdsId + '?status=' + status, {method: 'PATCH'}).catch(() => {});
+  }
+  setTimeout(loadKDS, 500);
+}
+
+// Menu
+async function loadMenu() {
+  try {
+    const items = await api('/api/v1/menu');
+    document.getElementById('menuTable').innerHTML = items.map(m => `
+      <tr><td>${m.id}</td><td>${m.name}</td><td>${m.category}</td><td>$${m.selling_price.toFixed(2)}</td><td>$${m.packaging_cost.toFixed(2)}</td><td>${m.active ? '✅' : '❌'}</td></tr>
+    `).join('');
+  } catch(e) { document.getElementById('menuTable').innerHTML = '<tr><td colspan="6" class="empty">Error: ' + e.message + '</td></tr>'; }
+}
+
+// Inventory
+async function loadInventory() {
+  try {
+    const items = await api('/api/v1/inventory/low-stock');
+    const el = document.getElementById('inventoryTable');
+    if (!items || items.length === 0) { el.innerHTML = '<tr><td colspan="5" class="empty">All stocked up</td></tr>'; return; }
+    el.innerHTML = items.map(i => `<tr><td>${i.id}</td><td>${i.name}</td><td>${i.unit}</td><td>${i.current_stock}</td><td>${i.reorder_threshold}</td></tr>`).join('');
+  } catch(e) { document.getElementById('inventoryTable').innerHTML = '<tr><td colspan="5" class="empty">Error: ' + e.message + '</td></tr>'; }
+}
+
+// Shifts
+async function openShift() {
+  try {
+    const data = await api('/api/v1/shifts', {
+      method: 'POST',
+      body: JSON.stringify({ cashier_id: document.getElementById('shiftCashier').value, opening_cash: parseFloat(document.getElementById('shiftOpening').value) })
+    });
+    toast('Shift opened: ' + data.id);
+    loadShifts();
+  } catch(e) { toast(e.message, 'error'); }
+}
+async function loadShifts() {
+  try {
+    const shifts = await api('/api/v1/shifts');
+    document.getElementById('shiftsTable').innerHTML = (shifts || []).map(s => `
+      <tr><td>${s.id}</td><td>${s.cashier_id}</td><td><span class="badge badge-${s.status === 'open' ? 'green' : 'blue'}">${s.status}</span></td><td>$${s.expected_cash?.toFixed(2) || '0.00'}</td><td>${s.started_at?.slice(0,16) || ''}</td></tr>
+    `).join('');
+  } catch(e) { document.getElementById('shiftsTable').innerHTML = '<tr><td colspan="5" class="empty">Error: ' + e.message + '</td></tr>'; }
+}
+async function reconcileShift() {
+  try {
+    const data = await api('/api/v1/shifts/' + document.getElementById('reconShiftId').value + '/reconcile', {
+      method: 'POST',
+      body: JSON.stringify({ actual_cash: parseFloat(document.getElementById('reconActual').value) })
+    });
+    document.getElementById('reconResult').textContent = JSON.stringify(data, null, 2);
+    toast('Shift reconciled');
+    loadShifts();
+  } catch(e) { document.getElementById('reconResult').textContent = 'Error: ' + e.message; toast(e.message, 'error'); }
+}
+
+// Reports
+async function loadDailySales() {
+  try {
+    const data = await api('/api/v1/reports/daily-sales/' + document.getElementById('reportDate').value);
+    document.getElementById('dailySalesResult').textContent = JSON.stringify(data, null, 2);
+  } catch(e) { document.getElementById('dailySalesResult').textContent = 'Error: ' + e.message; }
+}
+async function loadForecast() {
+  try {
+    const data = await api('/api/v1/reports/forecast?days=' + document.getElementById('forecastDays').value);
+    document.getElementById('forecastResult').textContent = JSON.stringify(data, null, 2);
+  } catch(e) { document.getElementById('forecastResult').textContent = 'Error: ' + e.message; }
+}
+async function loadMenuEngineering() {
+  try {
+    const data = await api('/api/v1/reports/menu-engineering');
+    document.getElementById('menuEngResult').textContent = JSON.stringify(data, null, 2);
+  } catch(e) { document.getElementById('menuEngResult').textContent = 'Error: ' + e.message; }
+}
+async function loadWaste() {
+  try {
+    const data = await api('/api/v1/reports/waste');
+    document.getElementById('wasteResult').textContent = JSON.stringify(data, null, 2);
+  } catch(e) { document.getElementById('wasteResult').textContent = 'Error: ' + e.message; }
+}
+async function loadBranchCompare() {
+  try {
+    const data = await api('/api/v1/branches/compare');
+    document.getElementById('branchCompareResult').textContent = JSON.stringify(data, null, 2);
+  } catch(e) { document.getElementById('branchCompareResult').textContent = 'Error: ' + e.message; }
+}
+async function recordWaste() {
+  try {
+    const data = await api('/api/v1/inventory/waste', {
+      method: 'POST',
+      body: JSON.stringify({
+        ingredient_id: document.getElementById('wasteIngId').value,
+        quantity: parseFloat(document.getElementById('wasteQty').value),
+        unit: document.getElementById('wasteUnit').value,
+        reason: document.getElementById('wasteReason').value
+      })
+    });
+    document.getElementById('wasteRecordResult').textContent = JSON.stringify(data, null, 2);
+    toast('Waste recorded');
+  } catch(e) { document.getElementById('wasteRecordResult').textContent = 'Error: ' + e.message; toast(e.message, 'error'); }
+}
+
+// Customers
+async function lookupCustomer() {
+  try {
+    const data = await api('/api/v1/customers/' + document.getElementById('custId').value);
+    document.getElementById('custResult').textContent = JSON.stringify(data, null, 2);
+  } catch(e) { document.getElementById('custResult').textContent = 'Error: ' + e.message; }
+}
+
+function loadAll() {
+  loadDashboard();
+}
+
+// Boot
+loadAll();
+</script>
+</body>
+</html>
