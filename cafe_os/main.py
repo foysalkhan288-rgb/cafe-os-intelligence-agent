@@ -330,7 +330,6 @@ async def create_order_endpoint(payload: OrderIn):
 async def seed_demo_endpoint():
     """Generate demo orders with KDS tickets for dashboard display."""
     import uuid, datetime, json
-    from decimal import Decimal
     demos = [
         ("C1", "T1", "cust-001", [("latte-001", 2, ["oat-milk"], "extra shot"), ("muffin-001", 1, [], "")]),
         ("C2", "T3", None, [("cappuccino-001", 1, [], "no whip"), ("espresso-001", 2, ["extra shot"], "")]),
@@ -709,4 +708,3 @@ async def kds_websocket(websocket: WebSocket):
         if sender is not None:
             sender.cancel()
         kds_bus.unsubscribe(queue)
-# demo endpoint
