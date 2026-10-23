@@ -159,6 +159,7 @@
         <textarea id="orderItems" rows="4" placeholder='[{"menu_item_id":"latte-001","quantity":2,"modifiers":["oat-milk"],"special_instructions":"extra shot"}]'>[{"menu_item_id":"latte-001","quantity":1}]</textarea>
       </div>
       <button onclick="createOrder()">Create Order</button>
+      <button class="secondary" onclick="createDemoOrder()" style="margin-left:8px;">🎲 Create Demo Order</button>
     </div>
     <div class="card">
       <div class="card-title">Order Result</div>
@@ -402,6 +403,21 @@ async function createOrder() {
     document.getElementById('orderResult').textContent = 'Error: ' + e.message;
     toast(e.message, 'error');
   }
+}
+
+async function createDemoOrder() {
+  const demos = [
+    { counter: 'C1', table: 'T1', items: [{menu_item_id:'latte-001', quantity:2, modifiers:['oat-milk'], special_instructions:'extra shot'}] },
+    { counter: 'C2', table: 'T3', items: [{menu_item_id:'cappuccino-001', quantity:1, modifiers:[], special_instructions:'no whip'}, {menu_item_id:'espresso-001', quantity:2, modifiers:['extra shot'], special_instructions:''}] },
+    { counter: 'C3', table: null, items: [{menu_item_id:'latte-001', quantity:1, modifiers:[], special_instructions:''}, {menu_item_id:'muffin-001', quantity:2, modifiers:[], special_instructions:'warm'}] },
+    { counter: 'C1', table: 'T2', items: [{menu_item_id:'espresso-001', quantity:3, modifiers:[], special_instructions:''}, {menu_item_id:'cappuccino-001', quantity:1, modifiers:['oat milk'], special_instructions:''}] },
+    { counter: 'C4', table: 'T5', items: [{menu_item_id:'muffin-001', quantity:1, modifiers:[], special_instructions:''}, {menu_item_id:'latte-001', quantity:1, modifiers:['oat-milk','extra shot'], special_instructions:'decaf'}] },
+  ];
+  const d = demos[Math.floor(Math.random() * demos.length)];
+  document.getElementById('orderCounter').value = d.counter;
+  document.getElementById('orderTable').value = d.table || '';
+  document.getElementById('orderItems').value = JSON.stringify(d.items);
+  await createOrder();
 }
 
 // KDS WebSocket
