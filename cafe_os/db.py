@@ -327,6 +327,7 @@ async def seed_demo_orders() -> None:
 
         await conn.commit()
 
+@asynccontextmanager
 
 async def db_lifespan(app) -> AsyncGenerator[None, None]:
     await init_db()
