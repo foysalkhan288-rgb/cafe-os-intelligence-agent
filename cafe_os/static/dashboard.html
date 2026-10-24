@@ -138,6 +138,11 @@
       <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Generate sample orders with KDS tickets to populate the dashboard.</p>
       <button onclick="generateDemo()">🎲 Generate Demo Orders</button>
       <pre id="demoResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+    <div class="card" style="margin-top:16px;border-color:var(--accent);">
+      <div class="card-title">🎬 Full End-to-End Demo</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Creates 6 orders, dispatches to KDS, pays 4, records waste, reconciles a shift. Populates the entire dashboard.</p>
+      <button onclick="runFullDemo()" style="background:var(--accent);">Run Full Demo</button>
+      <pre id="fullDemoResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
     </div>
     </div>
   </div>
@@ -588,6 +593,24 @@ async function generateDemo() {
     loadKDS();
   } catch(e) {
     document.getElementById('demoResult').textContent = 'Error: ' + e.message;
+    toast(e.message, 'error');
+  }
+}
+
+// Full Demo
+async function runFullDemo() {
+  try {
+    document.getElementById('fullDemoResult').textContent = 'Running full demo...';
+    const data = await api('/api/v1/demo/full', { method: 'POST' });
+    document.getElementById('fullDemoResult').textContent = JSON.stringify(data, null, 2);
+    toast('Full demo complete! ' + data.orders_created + ' orders, ' + data.payments_processed + ' payments');
+    loadDashboard();
+    loadKDS();
+    loadShifts();
+    loadMenu();
+    loadInventory();
+  } catch(e) {
+    document.getElementById('fullDemoResult').textContent = 'Error: ' + e.message;
     toast(e.message, 'error');
   }
 }

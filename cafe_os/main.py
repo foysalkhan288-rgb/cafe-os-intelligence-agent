@@ -381,6 +381,111 @@ async def seed_demo_endpoint():
             created.append(order_id)
         await conn.commit()
     return {"created": len(created), "order_ids": created}
+@app.post("/api/v1/demo/full", status_code=201)
+async def full_demo_endpoint():
+    """Run a fully end-to-end demo: shift, orders, KDS, payments, waste, reconciliation."""
+    import uuid, datetime, json, random
+    from decimal import Decimal
+    from cafe_os.tools import (
+        create_order, add_order_item, get_menu_item, lookup_modifiers,
+        calculate_totals, dispatch_kds, deduct_inventory, record_payment,
+        open_shift, reconcile_shift, record_waste, update_kds_status,
+    )
+
+    results = {"shifts": [], "orders": [], "payments": [], "kds_updates": [], "waste": []}
+
+    # 1. Open a shift
+    shift = await open_shift("cashier-demo", 200.0)
+    results["shifts"].append(shift)
+
+    # 2. Demo orders
+    demos = [
+        ("C1", "T1", "cust-001", [("latte-001", 2, ["oat-milk"], "extra shot"), ("muffin-001", 1, [], "")], "cash"),
+        ("C2", "T3", None, [("cappuccino-001", 1, [], "no whip"), ("espresso-001", 2, ["extra shot"], "")], "card"),
+        ("C3", None, "cust-002", [("latte-001", 1, [], ""), ("muffin-001", 2, [], "warm")], "mobile"),
+        ("C1", "T2", None, [("espresso-001", 3, [], ""), ("cappuccino-001", 1, ["oat milk"], "")], "cash"),
+        ("C4", "T5", None, [("muffin-001", 1, [], ""), ("latte-001", 1, ["oat-milk", "extra shot"], "decaf")], "card"),
+        ("C2", "T4", "cust-001", [("latte-001", 1, [], "iced"), ("espresso-001", 1, [], "")], "cash"),
+    ]
+
+    kds_ids = []
+    order_ids = []
+    for counter, table, cust, items, pay_method in demos:
+        # Create order
+        order = await create_order(counter, table, cust)
+        order_id = order["order_id"]
+        order_ids.append(order_id)
+
+        # Add items
+        subtotal = Decimal("0")
+        for menu_id, qty, mods, special in items:
+            menu = await get_menu_item(menu_id)
+            unit_price = Decimal(str(menu["menu_item"]["selling_price"]))
+            merged = list(dict.fromkeys(mods + (await (lambda t: __import__("cafe_os.tools", fromlist=["extract_modifier_keywords"]).extract_modifier_keywords(t))(special))))
+            await add_order_item(order_id, menu_id, qty, unit_price, merged, special)
+            item_total = unit_price * qty
+            if merged:
+                lookup = await lookup_modifiers(merged)
+                for mod in lookup.get("matched", []):
+                    item_total += mod["price_delta"] * qty
+            subtotal += item_total
+
+        # Calculate totals
+        totals = await calculate_totals(subtotal=subtotal)
+        async with get_connection() as conn:
+            await conn.execute("UPDATE orders SET subtotal=?, tax=?, total=? WHERE id=?",
+                               (totals["subtotal"], totals["tax"], totals["total"], order_id))
+            await conn.commit()
+
+        # Dispatch KDS
+        kds = await dispatch_kds(order_id)
+        kds_id = kds["kds_id"] if isinstance(kds, dict) else kds.get("kds_id")
+        kds_ids.append(kds_id)
+
+        # Deduct inventory
+        await deduct_inventory(order_id)
+
+        results["orders"].append({"order_id": order_id, "total": totals["total"], "kds_id": kds_id})
+
+    # 3. Update KDS statuses (various states)
+    statuses = ["acknowledged", "in_progress", "completed", "acknowledged", "in_progress", "dispatched"]
+    for kds_id, status in zip(kds_ids, statuses):
+        if status != "dispatched":
+            await update_kds_status(kds_id, status)
+            results["kds_updates"].append({"kds_id": kds_id, "status": status})
+
+    # 4. Pay orders (first 4)
+    pay_methods = ["cash", "card", "mobile", "cash"]
+    for i, (order_id, method) in enumerate(zip(order_ids[:4], pay_methods)):
+        try:
+            pay = await record_payment(order_id, method, shift["shift_id"])
+            results["payments"].append(pay)
+        except Exception as e:
+            results["payments"].append({"order_id": order_id, "error": str(e)})
+
+    # 5. Record waste
+    waste_items = [
+        ("ing-001", 500.0, "ml", "spoilage"),
+        ("ing-006", 100.0, "ml", "overproduction"),
+        ("ing-005", 5.0, "pcs", "expired"),
+    ]
+    for ing_id, qty, unit, reason in waste_items:
+        w = await record_waste(ing_id, qty, unit, reason, "demo-staff")
+        results["waste"].append(w)
+
+    # 6. Reconcile shift
+    recon = await reconcile_shift(shift["shift_id"], 350.0)
+    results["shifts"].append({"reconciled": recon})
+
+    return {
+        "status": "demo complete",
+        "orders_created": len(order_ids),
+        "payments_processed": len(results["payments"]),
+        "kds_tickets": len(kds_ids),
+        "waste_records": len(results["waste"]),
+        "shift_reconciled": True,
+        "details": results,
+    }
 
 
 @app.post("/api/v1/orders/{order_id}/pay", response_model=PaymentOut)
