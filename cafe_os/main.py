@@ -421,7 +421,8 @@ async def full_demo_endpoint():
         for menu_id, qty, mods, special in items:
             menu = await get_menu_item(menu_id)
             unit_price = Decimal(str(menu["menu_item"]["selling_price"]))
-            merged = list(dict.fromkeys(mods + (await (lambda t: __import__("cafe_os.tools", fromlist=["extract_modifier_keywords"]).extract_modifier_keywords(t))(special))))
+            extracted = await __import__("cafe_os.tools", fromlist=["extract_modifier_keywords"]).extract_modifier_keywords(special)
+            merged = list(dict.fromkeys(mods + extracted))
             await add_order_item(order_id, menu_id, qty, unit_price, merged, special)
             item_total = unit_price * qty
             if merged:
@@ -458,7 +459,7 @@ async def full_demo_endpoint():
     pay_methods = ["cash", "card", "mobile", "cash"]
     for i, (order_id, method) in enumerate(zip(order_ids[:4], pay_methods)):
         try:
-            pay = await record_payment(order_id, method, shift["shift_id"])
+            pay = await record_payment(order_id, method, shift["id"])
             results["payments"].append(pay)
         except Exception as e:
             results["payments"].append({"order_id": order_id, "error": str(e)})
@@ -474,7 +475,7 @@ async def full_demo_endpoint():
         results["waste"].append(w)
 
     # 6. Reconcile shift
-    recon = await reconcile_shift(shift["shift_id"], 350.0)
+    recon = await reconcile_shift(shift["id"], 350.0)
     results["shifts"].append({"reconciled": recon})
 
     return {
