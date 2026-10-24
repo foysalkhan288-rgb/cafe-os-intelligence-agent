@@ -331,5 +331,5 @@ async def seed_demo_orders() -> None:
 async def db_lifespan(app) -> AsyncGenerator[None, None]:
     await init_db()
     await seed_sample_data()
-    await seed_demo_orders()
+
     yield
