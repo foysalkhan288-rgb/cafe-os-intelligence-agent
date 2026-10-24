@@ -107,6 +107,7 @@
   <div class="nav-item" data-page="customers"><span class="nav-icon">👤</span><span>Customers</span></div>
   <div style="margin-top: auto; padding: 8px;">
     <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span>Settings</span></div>
+  <div class="nav-item" data-page="guide"><span class="nav-icon">📖</span><span>Guide</span></div>
   </div>
 </div>
 
@@ -299,9 +300,159 @@
       <p style="color:var(--muted);font-size:13px;">Cafe OS Intelligence Agent v0.1.0 — LangGraph + FastAPI + SQLite</p>
     </div>
   </div>
-</div>
 
-<div class="toast" id="toast"></div>
+  <!-- Guide Page -->
+  <div class="page" id="page-guide">
+    <div class="page-title">📖 Guide & Situations</div>
+    <div class="page-sub">What each section does, and what happens in different scenarios</div>
+
+    <div class="card">
+      <div class="card-title">🏠 Dashboard (Home)</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Live overview of your cafe. Shows 4 stats: Menu Items, Low Stock count, KDS Tickets, Open Shifts. Below: Recent Orders (last 5) and Low Stock Alerts.</p>
+      <table><thead><tr><th>Situation</th><th>What happens</th></tr></thead><tbody>
+        <tr><td>No orders yet</td><td>"No orders yet" shown in Recent Orders</td></tr>
+        <tr><td>All stock above threshold</td><td>"All stocked up" in Low Stock Alerts</td></tr>
+        <tr><td>Some items below reorder level</td><td>Listed with current stock and threshold</td></tr>
+        <tr><td>KDS tickets active</td><td>Count shown, click Kitchen tab to manage</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧾 Orders</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Create orders with counter number, optional table, and items JSON. Each order triggers the LangGraph pipeline: customer lookup → parse → validate modifiers → calculate totals → dispatch KDS → deduct inventory.</p>
+      <table><thead><tr><th>Button / Action</th><th>What it does</th></tr></thead><tbody>
+        <tr><td>Create Order</td><td>Submits the form. On success: order created, KDS ticket dispatched, inventory deducted. Result shown below.</td></tr>
+        <tr><td>🎲 Create Demo Order</td><td>Picks a random demo order (latte, cappuccino, etc.) and creates it. Good for quick testing.</td></tr>
+      </tbody></table>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;font-weight:600;">Possible situations:</p>
+      <table><thead><tr><th>Situation</th><th>Result</th></tr></thead><tbody>
+        <tr><td>Valid items (latte-001, etc.)</td><td>Order created, total calculated, KDS dispatched, inventory deducted</td></tr>
+        <tr><td>Invalid menu item ID (e.g. "ashiqe-001")</td><td>400 error: "Menu item not found" — order rolled back</td></tr>
+        <tr><td>Empty items array</td><td>400 validation error — at least 1 item required</td></tr>
+        <tr><td>Modifier "oat-milk" in items</td><td>Oat milk ingredient deducted instead of regular milk, +$0.50 price delta</td></tr>
+        <tr><td>Special instructions "extra shot"</td><td>Modifier keyword auto-extracted, extra espresso shot added, +$0.75</td></tr>
+        <tr><td>Customer with 150 points (cust-001)</td><td>10% loyalty discount applied automatically</td></tr>
+        <tr><td>Customer with 50 points (cust-002)</td><td>No discount (needs 100+ points)</td></tr>
+        <tr><td>No customer specified</td><td>No loyalty lookup, no discount</td></tr>
+        <tr><td>With table number</td><td>Table assigned to order</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">👨‍🍳 Kitchen (KDS)</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Live kitchen display. Tickets appear in real-time via WebSocket. Each ticket shows items, quantities, modifiers, and special instructions. Click buttons to update status.</p>
+      <table><thead><tr><th>Button</th><th>What it does</th></tr></thead><tbody>
+        <tr><td>Ack (Acknowledge)</td><td>Kitchen sees the order — status → "acknowledged"</td></tr>
+        <tr><td>Start</td><td>Cooking begins — status → "in_progress"</td></tr>
+        <tr><td>Done (Complete)</td><td>Order ready — status → "completed" (hidden from default view)</td></tr>
+      </tbody></table>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;font-weight:600;">Possible situations:</p>
+      <table><thead><tr><th>Situation</th><th>Result</th></tr></thead><tbody>
+        <tr><td>No active tickets</td><td>"No active tickets" shown</td></tr>
+        <tr><td>New order created</td><td>Ticket appears instantly via WebSocket (no refresh needed)</td></tr>
+        <tr><td>WebSocket disconnected</td><td>Red dot shown, auto-reconnects in 3s</td></tr>
+        <tr><td>Ticket completed</td><td>Removed from default view, still in DB</td></tr>
+        <tr><td>Multiple tickets</td><td>Grid layout, sorted by dispatch time</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Menu</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Lists all active menu items with ID, name, category, price, packaging cost, and active status. Data comes from the seeded menu.</p>
+      <table><thead><tr><th>Item</th><th>ID</th><th>Price</th></tr></thead><tbody>
+        <tr><td>Latte</td><td>latte-001</td><td>$4.50</td></tr>
+        <tr><td>Cappuccino</td><td>cappuccino-001</td><td>$4.00</td></tr>
+        <tr><td>Espresso</td><td>espresso-001</td><td>$3.00</td></tr>
+        <tr><td>Blueberry Muffin</td><td>muffin-001</td><td>$3.50</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📦 Inventory</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Shows items below reorder threshold. Each item: ID, name, unit, current stock, reorder threshold.</p>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;font-weight:600;">Possible situations:</p>
+      <table><thead><tr><th>Situation</th><th>Result</th></tr></thead><tbody>
+        <tr><td>All stock above threshold</td><td>"All stocked up" message</td></tr>
+        <tr><td>After many orders</td><td>Milk/espresso stock drops, may trigger low-stock alert</td></tr>
+        <tr><td>After waste recording</td><td>Stock decreases further</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💰 Shifts</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Manage cashier shifts. Open with cashier ID and opening cash. Reconcile by entering actual cash counted. Cash payments auto-bank to the open shift.</p>
+      <table><thead><tr><th>Button</th><th>What it does</th></tr></thead><tbody>
+        <tr><td>Open Shift</td><td>Creates new shift with opening cash as expected_cash</td></tr>
+        <tr><td>Reconcile & Close</td><td>Compares expected vs actual cash, closes shift, flags if difference > $10</td></tr>
+      </tbody></table>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;font-weight:600;">Possible situations:</p>
+      <table><thead><tr><th>Situation</th><th>Result</th></tr></thead><tbody>
+        <tr><td>Actual = Expected</td><td>cash_difference = 0, not flagged</td></tr>
+        <tr><td>Actual differs by ≤ $10</td><td>Flagged = false (within tolerance)</td></tr>
+        <tr><td>Actual differs by > $10</td><td>Flagged = true (needs review)</td></tr>
+        <tr><td>Reconcile already-closed shift</td><td>400 error: "already closed"</td></tr>
+        <tr><td>Reconcile nonexistent shift</td><td>404 error: "not found"</td></tr>
+        <tr><td>Cash payment with 1 open shift</td><td>Order total banked to that shift's expected_cash</td></tr>
+        <tr><td>Cash payment with 0 or 2+ open shifts</td><td>Payment succeeds but no banking (ambiguous)</td></tr>
+        <tr><td>Card/mobile payment</td><td>No shift banking (only cash affects drawer)</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📈 Reports</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Analytics and reporting. Each button loads data into the result box below.</p>
+      <table><thead><tr><th>Button</th><th>What it loads</th></tr></thead><tbody>
+        <tr><td>Daily Sales</td><td>Gross/net revenue, tax, order count, avg basket, payment breakdown, top item</td></tr>
+        <tr><td>Sales Forecast</td><td>Rolling average prediction for N days ahead</td></tr>
+        <tr><td>Menu Engineering</td><td>4-quadrant matrix: Stars, Puzzles, Plowhorses, Dogs (by margin & popularity)</td></tr>
+        <tr><td>Waste Analytics</td><td>Actual vs theoretical consumption, variance, high-variance items</td></tr>
+        <tr><td>Branch Comparison</td><td>Performance across branches (revenue, orders, avg basket)</td></tr>
+        <tr><td>Record Waste</td><td>Log spoilage/overproduction/expired with ingredient, qty, unit, reason</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">👤 Customers</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">CRM lookup by customer ID. Shows name, phone, reward points, preferences. Points accrue on payment (1 point per $1).</p>
+      <table><thead><tr><th>Situation</th><th>Result</th></tr></thead><tbody>
+        <tr><td>Existing customer (cust-001)</td><td>Details shown, points updated after payments</td></tr>
+        <tr><td>Nonexistent customer</td><td>404 error: "not found"</td></tr>
+        <tr><td>After paying an order for cust-001</td><td>Reward points increase by order total (floor)</td></tr>
+        <tr><td>100+ points on order</td><td>10% loyalty discount applied to order total</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎬 Demo Buttons</div>
+      <table><thead><tr><th>Button</th><th>What it does</th></tr></thead><tbody>
+        <tr><td>🎲 Generate Demo Orders</td><td>Creates 5 random orders with KDS tickets. Good for quick population.</td></tr>
+        <tr><td>🎬 Run Full Demo</td><td>Full end-to-end: 6 orders, KDS in various states, 4 payments, 3 waste records, shift reconciliation. Populates everything.</td></tr>
+      </tbody></table>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Note: Running demos multiple times creates more data each time. Dashboard stats update after each run.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚙️ Settings</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Configure API base URL and API key. Stored in browser localStorage. API key is sent as X-API-Key header on all /api/v1 calls.</p>
+      <table><thead><tr><th>Situation</th><th>Result</th></tr></thead><tbody>
+        <tr><td>Auth enabled (API_KEY set on server)</td><td>Must enter key here or all /api/v1 calls return 401</td></tr>
+        <tr><td>Auth disabled (no API_KEY)</td><td>Leave empty — all calls work without key</td></tr>
+        <tr><td>Wrong key entered</td><td>401/403 on all data calls</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔌 Authentication</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Controlled by API_KEY environment variable on the server.</p>
+      <table><thead><tr><th>API_KEY state</th><th>Behavior</th></tr></thead><tbody>
+        <tr><td>Set (non-empty)</td><td>All /api/v1/* and /ws/kds require X-API-Key header or ?api_key= param</td></tr>
+        <tr><td>Unset (empty)</td><td>Open access — no authentication needed</td></tr>
+        <tr><td>Wrong key</td><td>401 for HTTP, 403 (close) for WebSocket</td></tr>
+      </tbody></table>
+      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Public endpoints (no auth): /, /docs, /redoc, /openapi.json, /healthz, /dashboard</p>
+    </div>
+  </div>
+
 
 <script>
 const DEFAULT_BASE = window.location.origin;
