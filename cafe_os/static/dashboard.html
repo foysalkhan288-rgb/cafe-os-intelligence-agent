@@ -134,17 +134,22 @@
         <div class="card-title">Recent Orders</div>
         <div id="recentOrders"><div class="empty">No orders yet</div></div>
       </div>
+      <div class="card">
+        <div class="card-title">Low Stock Alerts</div>
+        <div id="lowStockList"><div class="empty">All stocked up</div></div>
+      </div>
+    </div>
     <div class="card" style="margin-top:16px;">
       <div class="card-title">Demo Data</div>
       <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Generate sample orders with KDS tickets to populate the dashboard.</p>
       <button onclick="generateDemo()">🎲 Generate Demo Orders</button>
       <pre id="demoResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
+    </div>
     <div class="card" style="margin-top:16px;border-color:var(--accent);">
       <div class="card-title">🎬 Full End-to-End Demo</div>
       <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Creates 6 orders, dispatches to KDS, pays 4, records waste, reconciles a shift. Populates the entire dashboard.</p>
       <button onclick="runFullDemo()" style="background:var(--accent);">Run Full Demo</button>
       <pre id="fullDemoResult" style="white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;"></pre>
-    </div>
     </div>
   </div>
 
@@ -511,10 +516,12 @@ document.querySelectorAll('.nav-item').forEach(el => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('page-' + el.dataset.page).classList.add('active');
-    if (el.dataset.page === 'kds') connectWS();
+    if (el.dataset.page === 'kds') { connectWS(); loadKDS(); }
     if (el.dataset.page === 'menu') loadMenu();
     if (el.dataset.page === 'inventory') loadInventory();
     if (el.dataset.page === 'shifts') loadShifts();
+    if (el.dataset.page === 'reports') { loadDailySales(); loadForecast(); loadMenuEngineering(); loadWaste(); loadBranchCompare(); }
+    if (el.dataset.page === 'customers') {}
     if (el.dataset.page === 'dashboard') loadDashboard();
   });
 });
